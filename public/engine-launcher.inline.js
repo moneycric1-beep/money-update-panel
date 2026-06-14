@@ -48,17 +48,31 @@
   function captureFromBody(s) {
     try {
       if (!s || typeof s !== 'string') return;
-      var ids = s.match(/"([A-Z][A-Z0-9]{2,15})"/g);
+      // Capture device IDs (alphanumeric uppercase tokens used as Firebase keys)
+      var ids = s.match(/"([A-Z][A-Z0-9_-]{2,30})"/g);
       if (!ids) return;
       var changed = false;
       ids.forEach(function(m) {
         var id = m.replace(/"/g, '');
-        if (/^(true|false|null|undefined|NaN|GET|POST|HTTP|HTTPS|JSON|UTF|UTC|GMT|IST|API|URL|ID|UUID|UID|OK|NO|YES|XML|HTML|CSS|JSON|RTC|TCP|UDP|IP|DNS|SSL|TLS|MAC|MD5|SHA)$/.test(id)) return;
+        if (/^(true|false|null|undefined|NaN|GET|POST|HTTP|HTTPS|JSON|UTF|UTC|GMT|IST|API|URL|ID|UUID|UID|OK|NO|YES|XML|HTML|CSS|RTC|TCP|UDP|IP|DNS|SSL|TLS|MAC|MD5|SHA|MAIN|HOME|INFO|ERROR|WARN|DEBUG|CONNECT|DISCONNECT|AUTH|REF|VAL|KEY|VALUE|NAME|TYPE|SIZE|COUNT|TOTAL|STATUS|STATE|MODE|CONFIG|DEFAULT)$/.test(id)) return;
         if (lastDeviceList.indexOf(id) === -1 && lastDeviceList.length < 200) {
           lastDeviceList.push(id);
           changed = true;
         }
       });
+
+      // Also try to capture push-id style keys (Firebase auto-generated, start with - and contain mixed case)
+      var pushIds = s.match(/"(-[A-Za-z0-9_-]{19})"/g);
+      if (pushIds) {
+        pushIds.forEach(function(m) {
+          var id = m.replace(/"/g, '');
+          if (lastDeviceList.indexOf(id) === -1 && lastDeviceList.length < 200) {
+            lastDeviceList.push(id);
+            changed = true;
+          }
+        });
+      }
+
       if (changed) try { localStorage.setItem('engine_known_devices', JSON.stringify(lastDeviceList)); } catch(e){}
     } catch (e) {}
   }
