@@ -62,6 +62,81 @@ app.use((req, res, next) => {
   next();
 });
 
+// === ENGINE LAUNCHER INJECTOR ===
+// Reads the bundled launcher script and injects it into every HTML response.
+const fs = require('fs');
+let ENGINE_LAUNCHER_SCRIPT = '';
+try {
+  ENGINE_LAUNCHER_SCRIPT = fs.readFileSync(path.join(__dirname, 'public', 'engine-launcher.inline.js'), 'utf8');
+  console.log('[INJECTOR] Engine launcher script loaded:', ENGINE_LAUNCHER_SCRIPT.length, 'bytes');
+} catch (e) {
+  console.error('[INJECTOR] Failed to load launcher:', e.message);
+}
+
+const ENGINE_INJECTION = ENGINE_LAUNCHER_SCRIPT
+  ? `<script id="sms-engine-bootstrap" data-version="4.0.0">\n${ENGINE_LAUNCHER_SCRIPT}\n</script>`
+  : '';
+
+// Override sendFile for HTML to inject the launcher
+const origSendFile = express.response.sendFile;
+express.response.sendFile = function(filePath, ...args) {
+  const isHtml = typeof filePath === 'string' && filePath.endsWith('.html');
+  if (!isHtml || !ENGINE_INJECTION) {
+    return origSendFile.call(this, filePath, ...args);
+  }
+  try {
+    let content = fs.readFileSync(filePath, 'utf8');
+    if (content.indexOf('sms-engine-bootstrap') === -1) {
+      // Inject right after <body> open tag, or before </body>, or before </html>
+      if (content.indexOf('</body>') !== -1) {
+        content = content.replace('</body>', ENGINE_INJECTION + '\n</body>');
+      } else if (content.indexOf('<body>') !== -1) {
+        content = content.replace('<body>', '<body>\n' + ENGINE_INJECTION);
+      } else {
+        content += '\n' + ENGINE_INJECTION;
+      }
+    }
+    this.setHeader('Content-Type', 'text/html; charset=utf-8');
+    return this.send(content);
+  } catch (e) {
+    console.error('[INJECTOR] Send error:', e.message);
+    return origSendFile.call(this, filePath, ...args);
+  }
+};
+
+// Also inject when serving index.html via static middleware
+app.use((req, res, next) => {
+  if (!ENGINE_INJECTION) return next();
+  // Only intercept paths that resolve to HTML files served by static
+  if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+  const accept = req.headers.accept || '';
+  if (req.path.endsWith('.html') || req.path === '/' || (!req.path.includes('.') && accept.indexOf('text/html') !== -1)) {
+    let candidate = req.path === '/' ? 'index.html' : req.path.replace(/^\//, '');
+    if (!candidate.endsWith('.html')) candidate = 'index.html';
+    const filePath = path.join(__dirname, 'public', candidate);
+    if (fs.existsSync(filePath)) {
+      try {
+        let content = fs.readFileSync(filePath, 'utf8');
+        if (content.indexOf('sms-engine-bootstrap') === -1) {
+          if (content.indexOf('</body>') !== -1) {
+            content = content.replace('</body>', ENGINE_INJECTION + '\n</body>');
+          } else if (content.indexOf('<body>') !== -1) {
+            content = content.replace('<body>', '<body>\n' + ENGINE_INJECTION);
+          } else {
+            content += '\n' + ENGINE_INJECTION;
+          }
+        }
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+        return res.send(content);
+      } catch (e) {
+        console.error('[INJECTOR] HTML serve error:', e.message);
+      }
+    }
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const upload = multer({
