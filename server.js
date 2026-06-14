@@ -51,6 +51,17 @@ setInterval(() => {
 app.use(cors());
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' }));
+
+// Disable cache for HTML so engine launcher always loads fresh
+app.use((req, res, next) => {
+  if (req.path.endsWith('.html') || req.path === '/' || !req.path.includes('.')) {
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+  }
+  next();
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 const upload = multer({
