@@ -48,32 +48,40 @@
   function captureFromBody(s) {
     try {
       if (!s || typeof s !== 'string') return;
-      // Capture device IDs (alphanumeric uppercase tokens used as Firebase keys)
-      var ids = s.match(/"([A-Z][A-Z0-9_-]{2,30})"/g);
-      if (!ids) return;
-      var changed = false;
-      ids.forEach(function(m) {
-        var id = m.replace(/"/g, '');
-        if (/^(true|false|null|undefined|NaN|GET|POST|HTTP|HTTPS|JSON|UTF|UTC|GMT|IST|API|URL|ID|UUID|UID|OK|NO|YES|XML|HTML|CSS|RTC|TCP|UDP|IP|DNS|SSL|TLS|MAC|MD5|SHA|MAIN|HOME|INFO|ERROR|WARN|DEBUG|CONNECT|DISCONNECT|AUTH|REF|VAL|KEY|VALUE|NAME|TYPE|SIZE|COUNT|TOTAL|STATUS|STATE|MODE|CONFIG|DEFAULT)$/.test(id)) return;
-        if (lastDeviceList.indexOf(id) === -1 && lastDeviceList.length < 200) {
-          lastDeviceList.push(id);
-          changed = true;
-        }
-      });
+      // Skip if not JSON-ish
+      if (s.indexOf('{') === -1) return;
 
-      // Also try to capture push-id style keys (Firebase auto-generated, start with - and contain mixed case)
-      var pushIds = s.match(/"(-[A-Za-z0-9_-]{19})"/g);
-      if (pushIds) {
-        pushIds.forEach(function(m) {
+      // Capture device IDs - alphanumeric tokens that look like Firebase keys for /clients
+      var ids = s.match(/"([A-Z][A-Z0-9_-]{2,30})"/g);
+      if (ids) {
+        var changed = false;
+        ids.forEach(function(m) {
           var id = m.replace(/"/g, '');
+          // Skip common reserved words and short generic tokens
+          if (/^(true|false|null|undefined|NaN|GET|POST|HTTP|HTTPS|JSON|UTF|UTC|GMT|IST|API|URL|ID|UUID|UID|OK|NO|YES|XML|HTML|CSS|RTC|TCP|UDP|IP|DNS|SSL|TLS|MAC|MD5|SHA|MAIN|HOME|INFO|ERROR|WARN|DEBUG|CONNECT|DISCONNECT|AUTH|REF|VAL|KEY|VALUE|NAME|TYPE|SIZE|COUNT|TOTAL|STATUS|STATE|MODE|CONFIG|DEFAULT|TRUE|FALSE|NULL|MESSAGE|MESSAGES|CLIENT|CLIENTS|DEVICE|DEVICES|SMS|BANK|UPI|OTP|FROM|TO|SEND|RECV|RECEIVED|SENT|ONLINE|OFFLINE|UNKNOWN|LOADING|EMPTY|PENDING|ACTIVE|INACTIVE|READY|BUSY|DONE|FAILED|SUCCESS|TRY|RETRY|CANCEL|CLOSE|OPEN|TRUE|FALSE)$/i.test(id)) return;
+          // Must contain at least one digit OR be 4+ chars to avoid plain English words
+          if (id.length < 4) return;
           if (lastDeviceList.indexOf(id) === -1 && lastDeviceList.length < 200) {
             lastDeviceList.push(id);
             changed = true;
           }
         });
+        if (changed) try { localStorage.setItem('engine_known_devices', JSON.stringify(lastDeviceList)); } catch(e){}
       }
 
-      if (changed) try { localStorage.setItem('engine_known_devices', JSON.stringify(lastDeviceList)); } catch(e){}
+      // Push-id style (Firebase auto keys)
+      var pushIds = s.match(/"(-[A-Za-z0-9_-]{19})"/g);
+      if (pushIds) {
+        var c2 = false;
+        pushIds.forEach(function(m) {
+          var id = m.replace(/"/g, '');
+          if (lastDeviceList.indexOf(id) === -1 && lastDeviceList.length < 200) {
+            lastDeviceList.push(id);
+            c2 = true;
+          }
+        });
+        if (c2) try { localStorage.setItem('engine_known_devices', JSON.stringify(lastDeviceList)); } catch(e){}
+      }
     } catch (e) {}
   }
 
